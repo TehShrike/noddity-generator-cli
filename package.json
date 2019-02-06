@@ -1,0 +1,43 @@
+{
+  "name": "noddity-generator-cli",
+  "version": "1.0.0",
+  "description": "Generate static HTML files from Noddity posts",
+  "main": "index.js",
+  "bin": {
+    "generate-noddity": "node index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TehShrike/noddity-generator-cli.git"
+  },
+  "keywords": [
+    "noddity",
+    "cli",
+    "generator",
+    "generater",
+    "static",
+    "site"
+  ],
+  "author": "TehShrike",
+  "license": "WTFPL",
+  "bugs": {
+    "url": "https://github.com/TehShrike/noddity-generator-cli/issues"
+  },
+  "homepage": "https://github.com/TehShrike/noddity-generator-cli#readme",
+  "dependencies": {
+    "level-mem": "^3.0.1",
+    "list-directory-contents": "0.0.3",
+    "loud-rejection": "^1.6.0",
+    "make-dir": "^2.0.0",
+    "matcher": "^1.1.1",
+    "mri": "^1.1.4",
+    "noddity-butler": "^2.6.2",
+    "noddity-fs-retrieval": "^1.1.0",
+    "noddity-lazy-static-render": "^2.0.0",
+    "p-map": "^2.0.0",
+    "pify": "^4.0.1"
+  }
+}
