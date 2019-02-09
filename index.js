@@ -23,6 +23,7 @@ Options:
 --root       the directory to scrape for posts.  Defaults to the current working directory
 --template   (required) the template html file content should be injected into.  The file should contain '{{{html}}}'
 --output     (required) the directory where the html files should be created
+--extension  the extension to be used on the output files.  Defaults to 'html'
 pattern      patterns to match files against.  Defaults to '*.md'
 `)
 
@@ -32,25 +33,24 @@ const cli = async(...argv) => {
 			patterns: `_`,
 			templateFile: `template`,
 		},
+		defaults: {
+			root: process.cwd(),
+			extension: `html`,
+		},
 	})
 
 	if (args.patterns.length === 0) {
-		delete args.patterns
+		args.patterns = [ `*.md` ]
 	}
 
 	if (!args.output || !args.template) {
 		help()
 	} else {
-		const options = Object.assign({
-			root: process.cwd(),
-			patterns: [ `*.md` ],
-		}, args)
-
-		return generate(options)
+		return generate(args)
 	}
 }
 
-const generate = async({ root, output, templateFile, patterns }) => {
+const generate = async({ root, output, templateFile, patterns, extension }) => {
 	const [
 		indexHtml,
 		allFiles,
@@ -62,8 +62,6 @@ const generate = async({ root, output, templateFile, patterns }) => {
 	await makeDir(output)
 
 	const files = matcher(allFiles, patterns).map(file => path.relative(root, file))
-
-	console.log(files)
 
 	const { getPost } = makeFsRetrieval(root)
 
@@ -85,15 +83,15 @@ const generate = async({ root, output, templateFile, patterns }) => {
 	})
 
 	await pMap(files, async file => {
-		console.log(`rendering`, file)
 		try {
 			const html = await render({ file })
 
 			const { dir, name } = path.parse(path.join(output, file))
+
 			const outputPath = path.format({
 				dir,
 				name,
-				ext: `.html`,
+				ext: `.` + extension,
 			})
 
 			await writeFile(outputPath, html)
