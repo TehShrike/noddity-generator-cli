@@ -4,7 +4,7 @@
   "description": "Generate static HTML files from Noddity posts",
   "main": "index.js",
   "bin": {
-    "generate-noddity": "node index.js"
+    "generate-noddity": "index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
