@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 require(`loud-rejection`)()
 const pify = require(`pify`)
 const pMap = require(`p-map`)
