@@ -114,7 +114,6 @@ const generate = async({
 			butler,
 			getPostPromise,
 		}, feedSettings))
-		console.log(`writing`, xml.length, `to`, path.join(output, feedSettings.outputFileName))
 
 		await writeFile(path.join(output, feedSettings.outputFileName), xml)
 	}
