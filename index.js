@@ -3,6 +3,7 @@
 require(`loud-rejection`)()
 const pify = require(`pify`)
 const pMap = require(`p-map`)
+const pFilter = require(`p-filter`)
 
 const listDir = pify(require(`list-directory-contents`))
 const mri = require(`mri`)
@@ -24,6 +25,8 @@ Options:
 --template   (required) the template html file content should be injected into.  The file should contain '{{{html}}}'
 --output     (required) the directory where the html files should be created
 --extension  the extension to be used on the output files.  Defaults to 'html'
+--data       path to a js/json file to be 'require'd as the data object
+--filter     path to a js file exposing a filter function that determines if a post should be included in the index
 pattern      patterns to match files against.  Defaults to '*.md'
 `)
 
@@ -50,7 +53,18 @@ const cli = async(...argv) => {
 	}
 }
 
-const generate = async({ root, output, templateFile, patterns, extension }) => {
+const generate = async({
+	root,
+	output,
+	templateFile,
+	patterns,
+	extension,
+	data: dataFile,
+	filter: filterFile,
+}) => {
+	const data = dataFile ? require(path.join(process.cwd(), dataFile)) : {}
+	const filter = filterFile ? require(path.join(process.cwd(), filterFile)) : () => true
+
 	const [
 		indexHtml,
 		allFiles,
@@ -61,13 +75,22 @@ const generate = async({ root, output, templateFile, patterns, extension }) => {
 
 	await makeDir(output)
 
-	const files = matcher(allFiles, patterns).map(file => path.relative(root, file))
-
 	const { getPost } = makeFsRetrieval(root)
+
+	const allPaths = matcher(allFiles, patterns)
+		.map(file => path.relative(root, file))
+
+	const getPostPromise = pify(getPost)
+
+	const indexFiles = await pFilter(allPaths, async file => {
+		const post = await getPostPromise(file)
+
+		return filter(post)
+	})
 
 	const retrieval = {
 		getIndex(cb) {
-			process.nextTick(cb, null, files)
+			process.nextTick(cb, null, indexFiles)
 		},
 		getPost,
 	}
@@ -77,12 +100,10 @@ const generate = async({ root, output, templateFile, patterns, extension }) => {
 	const render = makeRenderer({
 		butler,
 		indexHtml,
-		data: {
-
-		},
+		data,
 	})
 
-	await pMap(files, async file => {
+	await pMap(allPaths, async file => {
 		try {
 			const html = await render({ file })
 

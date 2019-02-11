@@ -36,6 +36,7 @@
     "noddity-butler": "^2.6.2",
     "noddity-fs-retrieval": "^1.1.0",
     "noddity-lazy-static-render": "^2.0.0",
+    "p-filter": "^1.0.0",
     "p-map": "^2.0.0",
     "pify": "^4.0.1"
   }
