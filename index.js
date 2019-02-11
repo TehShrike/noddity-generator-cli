@@ -27,8 +27,11 @@ Options:
 --extension  the extension to be used on the output files.  Defaults to 'html'
 --data       path to a js/json file to be 'require'd as the data object
 --filter     path to a js file exposing a filter function that determines if a post should be included in the index
+--feed       path to a js/json file containing urlRoot, title, author, outputFileName, feedUrl
 pattern      patterns to match files against.  Defaults to '*.md'
 `)
+
+const requireCwd = file => require(path.join(process.cwd(), file))
 
 const cli = async(...argv) => {
 	const args = mri(argv, {
@@ -61,9 +64,10 @@ const generate = async({
 	extension,
 	data: dataFile,
 	filter: filterFile,
+	feed: feedSettingsFile,
 }) => {
-	const data = dataFile ? require(path.join(process.cwd(), dataFile)) : {}
-	const filter = filterFile ? require(path.join(process.cwd(), filterFile)) : () => true
+	const data = dataFile ? requireCwd(dataFile) : {}
+	const filter = filterFile ? requireCwd(filterFile) : () => true
 
 	const [
 		indexHtml,
@@ -103,6 +107,18 @@ const generate = async({
 		data,
 	})
 
+	if (feedSettingsFile) {
+		const feedSettings = requireCwd(feedSettingsFile)
+		const xml = await generateFeed(Object.assign({
+			indexFiles,
+			butler,
+			getPostPromise,
+		}, feedSettings))
+		console.log(`writing`, xml.length, `to`, path.join(output, feedSettings.outputFileName))
+
+		await writeFile(path.join(output, feedSettings.outputFileName), xml)
+	}
+
 	await pMap(allPaths, async file => {
 		try {
 			const html = await render({ file })
@@ -123,6 +139,70 @@ const generate = async({
 	}, { concurrency: 4 })
 }
 
+const FEED_TEMPLATE_POST = {
+	name: `template`,
+	metadata: {
+		title: `RSS Template`,
+		markdown: false,
+	},
+	content: `{{>current}}`,
+}
+
+const generateFeed = async({
+	indexFiles,
+	title,
+	author,
+	feedUrl,
+	urlRoot,
+	butler,
+	getPostPromise,
+}) => {
+	const url = require(`url`)
+	const Rss = require(`rss`)
+	const renderStatic = require(`noddity-render-static`)
+	const linkify = require(`noddity-linkifier`)(urlRoot)
+
+	const siteRootUrl = url.resolve(urlRoot, ``)
+	const rss = new Rss({
+		title,
+		feed_url: feedUrl,
+		site_url: siteRootUrl,
+		ttl: 12 * 60,
+	})
+
+	const addToFeed = rss.item.bind(rss)
+
+	const postItems = await pMap(indexFiles, async file => {
+		const post = await getPostPromise(file)
+
+		const html = await renderStatic(FEED_TEMPLATE_POST, post, {
+			butler,
+			linkifier: linkify,
+			data: {},
+		})
+
+		return {
+			title: post.metadata.title || post.filename,
+			description: html,
+			url: dumbResolve(urlRoot, post.filename),
+			// Because we're using an empty guid, post URLs must be unique!
+			// guid: '',
+			author: post.metadata.author || author,
+			date: post.metadata.date,
+		}
+	})
+
+	postItems.forEach(addToFeed)
+
+	return rss.xml()
+}
+
+function dumbResolve(firstThingy, secondThingy) {
+	const startsWithSlash = firstThingy[firstThingy.length - 1] === `/`
+	const separator = startsWithSlash ? `` : `/`
+
+	return firstThingy + separator + secondThingy
+}
 
 
 
