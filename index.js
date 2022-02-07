@@ -109,11 +109,13 @@ const generate = async({
 
 	if (feedSettingsFile) {
 		const feedSettings = requireCwd(feedSettingsFile)
-		const xml = await generateFeed(Object.assign({
+		const xml = await generateFeed({
 			indexFiles,
 			butler,
 			getPostPromise,
-		}, feedSettings))
+			extension,
+			...feedSettings,
+		})
 
 		await writeFile(path.join(output, feedSettings.outputFileName), xml)
 	}
@@ -155,6 +157,7 @@ const generateFeed = async({
 	urlRoot,
 	butler,
 	getPostPromise,
+	extension,
 }) => {
 	const url = require(`url`)
 	const Rss = require(`rss`)
@@ -180,10 +183,12 @@ const generateFeed = async({
 			data: {},
 		})
 
+		const { name: bareName } = path.parse(post.filename)
+
 		return {
-			title: post.metadata.title || post.filename,
+			title: post.metadata.title || bareName,
 			description: html,
-			url: dumbResolve(urlRoot, post.filename),
+			url: dumbResolve(urlRoot, bareName) + `.` + extension,
 			// Because we're using an empty guid, post URLs must be unique!
 			// guid: '',
 			author: post.metadata.author || author,
