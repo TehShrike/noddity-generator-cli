@@ -86,11 +86,28 @@ const generate = async({
 
 	const getPostPromise = pify(getPost)
 
-	const indexFiles = await pFilter(allPaths, async file => {
-		const post = await getPostPromise(file)
+	const allUnfilteredPosts = await Promise.all(allPaths.map(file => getPostPromise(file)))
 
-		return filter(post)
-	})
+	const indexFiles = allUnfilteredPosts.sort((postA, postB) => {
+		if (postA?.metadata?.date && postB?.metadata?.date) {
+			const a = new Date(postA.metadata.date)
+			const b = new Date(postB.metadata.date)
+
+			if (a < b) {
+				return -1
+			} else if (a > b) {
+				return 1
+			}
+
+			return 0
+		} else if (postA?.metadata?.date) {
+			return 1
+		} else if (postB?.metadata?.date) {
+			return -1
+		} else {
+			return postA.filename.localeCompare(postB.filename)
+		}
+	}).filter(filter).map(({ filename }) => filename)
 
 	const retrieval = {
 		getIndex(cb) {
@@ -172,8 +189,6 @@ const generateFeed = async({
 		ttl: 12 * 60,
 	})
 
-	const addToFeed = rss.item.bind(rss)
-
 	const postItems = await pMap(indexFiles, async file => {
 		const post = await getPostPromise(file)
 
@@ -196,7 +211,7 @@ const generateFeed = async({
 		}
 	})
 
-	postItems.forEach(addToFeed)
+	postItems.forEach(postItem => rss.item(postItem))
 
 	return rss.xml()
 }
