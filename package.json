@@ -1,6 +1,6 @@
 {
   "name": "noddity-generator-cli",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "Generate static HTML files from Noddity posts",
   "bin": {
     "generate-noddity": "index.js"
